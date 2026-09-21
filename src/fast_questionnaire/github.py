@@ -1,9 +1,10 @@
 """The GitHub calls the command-line tool and the app make.
 
 It knows nothing of the Questionnaire body format: it takes a title and a body
-already prepared, gives a body back as GitHub holds it, and it answers one
-question about a repository — is it private? Every failure comes back as a `GitHubError` carrying a message meant
-for a human, never as a traceback.
+already prepared, gives a body back as GitHub holds it, writes a body back as
+the transform rewrote it, comments on an issue, and it answers one question
+about a repository — is it private? Every failure comes back as a `GitHubError`
+carrying a message meant for a human, never as a traceback.
 """
 
 from __future__ import annotations
@@ -57,6 +58,9 @@ class Issue:
     number: int
     title: str
     body: str
+    # Who opened it: the author a comment mentions when answers are sent, so
+    # that they are notified without watching the issue.
+    author: str
 
 
 def refuse_public_repository(repository: Repository, token: str) -> None:
@@ -109,7 +113,49 @@ def fetch_issue(repository: Repository, number: int, token: str) -> Issue:
         raise GitHubError(
             f"GitHub a répondu pour {repository}#{number} sans donner d'issue."
         )
-    return Issue(number=number, title=title, body=body if isinstance(body, str) else "")
+    return Issue(
+        number=number,
+        title=title,
+        body=body if isinstance(body, str) else "",
+        author=_author(fetched),
+    )
+
+
+def _author(fetched: dict) -> str:
+    """The login of whoever opened the issue, when GitHub gives one."""
+    opened_by = fetched.get("user")
+    login = opened_by.get("login") if isinstance(opened_by, dict) else None
+    return login if isinstance(login, str) else ""
+
+
+def write_issue_body(
+    repository: Repository, number: int, body: str, token: str
+) -> None:
+    """Write a Questionnaire issue's body back, answers included.
+
+    The body written is the one the transform rewrote from the body read a
+    moment earlier: GitHub offers no conditional update, so re-reading just
+    before writing is all that stands between a send and the author's own
+    edits.
+    """
+    _request(
+        "PATCH",
+        f"/repos/{repository}/issues/{number:d}",
+        token,
+        payload={"body": body},
+    )
+
+
+def comment_on_issue(
+    repository: Repository, number: int, comment: str, token: str
+) -> None:
+    """Tell the author, on the issue itself, that answers have been sent."""
+    _request(
+        "POST",
+        f"/repos/{repository}/issues/{number:d}/comments",
+        token,
+        payload={"body": comment},
+    )
 
 
 def _request(

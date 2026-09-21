@@ -5,7 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from fast_questionnaire.body import PrepareError, Segment, Slot, prepare, read
+from fast_questionnaire.body import (
+    AnswerError,
+    PrepareError,
+    Segment,
+    Slot,
+    answer,
+    prepare,
+    read,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -279,3 +287,209 @@ def test_read_keeps_an_answer_that_quotes_something_itself():
     [slot] = slots(read(body))
 
     assert slot.answer == "Elle m'a dit :\n\n> deux par jour"
+
+
+# --- Answer -----------------------------------------------------------------
+
+
+def outside_the_slots(body: str) -> list[str]:
+    """Every line of a body that is not the contents of an answer slot.
+
+    The markers themselves count as outside: they are the format Prepare
+    published, and Answer has no business moving them either.
+    """
+    kept: list[str] = []
+    inside = False
+    for line in body.split("\n"):
+        marker = SLOT_MARKER.match(line)
+        if marker:
+            inside = bool(marker["name"])
+            kept.append(line)
+        elif not inside:
+            kept.append(line)
+    return kept
+
+
+def answers(body: str) -> dict[str, str]:
+    """What each slot of a body holds, by name."""
+    return {slot.name: slot.answer for slot in slots(read(body))}
+
+
+def test_an_answer_comes_back_identical_from_read():
+    body = prepare(fixture("template.md"))
+    written = {
+        "what-load-is-the-system-expected-to-handle-at-launch": (
+            "Environ **300** réservations par jour.\n"
+            "\n"
+            "- une pointe à la rentrée\n"
+            "- rien pendant les vacances\n"
+            "\n"
+            "Voir [le relevé](https://example.org/relevé)."
+        ),
+        "anything-else": "Je ne sais pas.",
+    }
+
+    assert answers(answer(body, written)) == written
+
+
+def test_answer_leaves_every_byte_outside_the_slots_unchanged():
+    body = prepare(fixture("questionnaire-fr.md"))
+    written = {name: f"Réponse à {name}." for name in slot_names(body)}
+
+    assert outside_the_slots(answer(body, written)) == outside_the_slots(body)
+
+
+def test_answer_writes_each_answer_as_a_blockquote_under_its_question():
+    body = prepare(fixture("template.md"))
+
+    written = answer(body, {"anything-else": "Rien d'autre.\n\nMerci."})
+
+    assert (
+        "<!-- q:anything-else -->\n> Rien d'autre.\n>\n> Merci.\n<!-- /q -->"
+        in written
+    )
+
+
+def test_answer_leaves_a_slot_absent_from_the_mapping_untouched():
+    body = answer(
+        prepare(fixture("template.md")),
+        {
+            "what-load-is-the-system-expected-to-handle-at-launch": "Trois cents.",
+            "anything-else": "Rien d'autre.",
+        },
+    )
+
+    again = answer(body, {"anything-else": "Si, une chose."})
+
+    assert answers(again) == {
+        "what-load-is-the-system-expected-to-handle-at-launch": "Trois cents.",
+        "anything-else": "Si, une chose.",
+    }
+
+
+def test_answer_restores_a_bare_stub_when_an_answer_is_emptied():
+    body = answer(prepare(fixture("template.md")), {"anything-else": "Une chose."})
+
+    emptied = answer(body, {"anything-else": ""})
+
+    assert "<!-- q:anything-else -->\n>\n<!-- /q -->" in emptied
+    assert answers(emptied)["anything-else"] == ""
+
+
+def test_answer_restores_a_bare_stub_when_an_answer_holds_only_blank_lines():
+    body = answer(prepare(fixture("template.md")), {"anything-else": "Une chose."})
+
+    emptied = answer(body, {"anything-else": "  \n\n  "})
+
+    assert "<!-- q:anything-else -->\n>\n<!-- /q -->" in emptied
+    assert answers(emptied)["anything-else"] == ""
+
+
+def test_answer_refuses_a_name_that_matches_no_slot():
+    body = prepare(fixture("template.md"))
+
+    with pytest.raises(AnswerError) as refusal:
+        answer(body, {"une-question-qui-n-existe-pas": "Bonjour."})
+
+    assert "une-question-qui-n-existe-pas" in str(refusal.value)
+
+
+def test_answer_keeps_an_answer_carrying_comment_markers_inside_its_slot():
+    body = prepare(fixture("template.md"))
+    dangerous = "Un commentaire <!-- caché --> et une fin --> toute seule."
+
+    written = answer(
+        body,
+        {"what-load-is-the-system-expected-to-handle-at-launch": dangerous},
+    )
+
+    # Neither marker survives as one GitHub would act on, and the slot that
+    # follows is still there, still empty, still its own.
+    assert slot_names(written) == slot_names(body)
+    assert answers(written)["anything-else"] == ""
+    assert "<!-- caché -->" not in written
+    assert "--> toute seule" not in written
+
+
+def test_answer_keeps_an_answer_carrying_a_heading_or_a_quote_inside_its_slot():
+    body = prepare(fixture("template.md"))
+    structured = "### Ma propre question\n\n> Ce qu'on m'a répondu\n\nEt la suite."
+
+    written = answer(
+        body,
+        {"what-load-is-the-system-expected-to-handle-at-launch": structured},
+    )
+
+    assert answers(written) == {
+        "what-load-is-the-system-expected-to-handle-at-launch": structured,
+        "anything-else": "",
+    }
+    assert outside_the_slots(written) == outside_the_slots(body)
+
+
+def test_answer_normalises_the_line_endings_a_browser_sends():
+    body = prepare(fixture("template.md"))
+
+    written = answer(body, {"anything-else": "Première ligne.\r\n\r\nSeconde ligne."})
+
+    assert "\r" not in written
+    assert answers(written)["anything-else"] == "Première ligne.\n\nSeconde ligne."
+
+
+def test_answer_trims_the_blank_lines_a_respondent_leaves_at_the_end():
+    body = prepare(fixture("template.md"))
+
+    written = answer(body, {"anything-else": "Une seule ligne.\n\n\n"})
+
+    assert "<!-- q:anything-else -->\n> Une seule ligne.\n<!-- /q -->" in written
+
+
+def test_answering_twice_leaves_an_escaped_answer_as_it_stands():
+    """A respondent who corrects another answer must not see this one change."""
+    body = prepare(fixture("template.md"))
+    dangerous = "Ouvre <!-- et ferme -->"
+
+    once = answer(
+        body, {"what-load-is-the-system-expected-to-handle-at-launch": dangerous}
+    )
+    twice = answer(
+        once,
+        {
+            "what-load-is-the-system-expected-to-handle-at-launch": answers(once)[
+                "what-load-is-the-system-expected-to-handle-at-launch"
+            ]
+        },
+    )
+
+    assert twice == once
+
+
+def test_answer_loses_no_answer_when_the_question_s_wording_changed():
+    """The author fixes a typo on GitHub between two sends."""
+    body = answer(
+        prepare(fixture("template.md")),
+        {
+            "what-load-is-the-system-expected-to-handle-at-launch": "Trois cents.",
+            "anything-else": "Rien d'autre.",
+        },
+    )
+    reworded = body.replace(
+        "### What load is the system expected to handle at launch?",
+        "### What load should the system handle at launch?",
+    )
+
+    again = answer(reworded, {"anything-else": "Si, une chose."})
+
+    assert answers(again) == {
+        "what-load-is-the-system-expected-to-handle-at-launch": "Trois cents.",
+        "anything-else": "Si, une chose.",
+    }
+
+
+def test_answer_gives_back_a_body_read_still_reads_as_the_same_document():
+    body = prepare(fixture("questionnaire-fr.md"))
+    written = answer(body, {"autre-chose": "Rien d'autre, merci."})
+
+    assert [type(part) for part in read(written)] == [
+        type(part) for part in read(body)
+    ]

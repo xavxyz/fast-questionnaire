@@ -3,27 +3,38 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block main %}
-  {% for part in parts %}
-    {% if part.kind == "markdown" %}
-{{ part.html | safe }}
-    {% else %}
-    <div class="reponse">
-      <label for="reponse-{{ part.name }}">Votre réponse</label>
-      <textarea
-        id="reponse-{{ part.name }}"
-        name="{{ part.name }}"
-        rows="6"
-        spellcheck="true"
-        placeholder="Écris ta réponse ici. « Je ne sais pas » est une bonne réponse."
-      >
-{{ part.answer }}</textarea>
-    </div>
-    {% endif %}
-  {% endfor %}
-  <p class="note">
-    L'envoi des réponses n'est pas encore disponible : ce que tu écris ici
-    n'est pas encore enregistré.
+  {% if envoye %}
+  <p class="confirmation" role="status">
+    Merci, tes réponses ont bien été enregistrées. Tu peux les corriger et les
+    renvoyer autant de fois que tu veux.
   </p>
+  {% endif %}
+  <form method="post" action="?key={{ key }}">
+    {% for part in parts %}
+      {% if part.kind == "markdown" %}
+{{ part.html | safe }}
+      {% else %}
+      <div class="reponse">
+        <label for="reponse-{{ part.name }}">Votre réponse</label>
+        <textarea
+          id="reponse-{{ part.name }}"
+          name="{{ part.name }}"
+          rows="6"
+          spellcheck="true"
+          placeholder="Écris ta réponse ici. « Je ne sais pas » est une bonne réponse."
+        >
+{{ part.answer }}</textarea>
+      </div>
+      {% endif %}
+    {% endfor %}
+    <p class="envoi">
+      <button type="submit">Envoyer mes réponses</button>
+    </p>
+    <p class="note">
+      Tu peux laisser des questions vides et envoyer quand même, puis revenir
+      compléter ou corriger tes réponses plus tard avec ce même lien.
+    </p>
+  </form>
 {% endblock %}
 
 {% block scripts %}

@@ -5,10 +5,10 @@ on:
 permissions:
   contents: read
 jobs:
-  ci:
+  checks:
     uses: ./.github/workflows/ci.yml
   deploy:
-    needs: ci
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

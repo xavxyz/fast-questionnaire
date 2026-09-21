@@ -90,9 +90,9 @@ writes nothing further.
 ## Deploy
 
 Every pull request against `main` runs the checks: the tests, `tach check` and
-the cycle check. They show on the PR as the `CI / checks` status check. See
-`.github/workflows/ci.yml`. Pull requests never deploy and never see the deploy
-secrets.
+the cycle check. They show on the pull request as the `CI / checks` status
+check. See `.github/workflows/ci.yml`. Pull requests never deploy and never see
+the deploy secrets.
 
 Every push to `main` runs the same checks, then deploys to FastAPI Cloud once
 they all pass. A failing check means no deploy, and pushes to other branches

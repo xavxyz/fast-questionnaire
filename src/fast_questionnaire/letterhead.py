@@ -2,8 +2,8 @@
 
 A `to-questionnaire` document opens with its title, then a paragraph giving its
 objective and one naming its sender, its recipient and what the answers will be
-used for — in French or in English. The page shows these in its header and its
-sidebar, so they are taken out of the Markdown before it is rendered; the rest
+used for — in French or in English. The page shows these above the document and
+in its sidebar, so they are taken out of the Markdown before it is rendered; the rest
 of the document, answer slots included, comes back untouched.
 """
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_TITLE = re.compile(r"^#\s+\S")
+_TITLE = re.compile(r"^#\s+(?P<title>\S.*?)(?:\s+#+)?\s*$")
 
 # A bold label opening a field: `**Objectif :**`, `**From:**`, or with the colon
 # left outside the bold, `**De** :`.
@@ -37,6 +37,7 @@ class Letterhead:
     A field the document does not give is empty.
     """
 
+    title: str
     sender: str
     recipient: str
     objective: str
@@ -54,8 +55,10 @@ def extract(document: str) -> Letterhead:
     lines = document.split("\n")
     fields: dict[str, str] = {}
     at = _past_blanks(lines, 0)
+    title = ""
 
-    if at < len(lines) and _TITLE.match(lines[at]):
+    if at < len(lines) and (heading := _TITLE.match(lines[at])):
+        title = heading["title"]
         at = _past_blanks(lines, at + 1)
 
     while at < len(lines):
@@ -69,6 +72,7 @@ def extract(document: str) -> Letterhead:
         at = _past_blanks(lines, end)
 
     return Letterhead(
+        title=title,
         sender=fields.get("sender", ""),
         recipient=fields.get("recipient", ""),
         objective=fields.get("objective", ""),

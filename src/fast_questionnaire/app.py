@@ -30,7 +30,7 @@ from .github import (
 )
 from .letterhead import extract
 from .link import KEY, opens
-from .page import draft_key, initials, inline_html, outline, parts
+from .page import draft_key, initials, outline, parts
 from .settings import MissingSetting, github_token, master_secret
 
 # What GitHub lets an owner or a repository be called. A name outside this is
@@ -41,6 +41,9 @@ _NAMEABLE = re.compile(r"^[A-Za-z0-9._-]+$")
 # What the page reads to know a send has just succeeded, and so to show the
 # confirmation the respondent is owed.
 ENVOYE = "envoye"
+
+# The picture the recipient is shown with: the school's logo, whoever they are.
+RECIPIENT_IMAGE = "https://oceens.mtp.epf.fr/static/img/epf_logo.png"
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
@@ -197,8 +200,9 @@ def _page(
 
     The page carries the name the respondent's draft is kept under, and whether
     a send has just succeeded: the draft itself never leaves their browser. The
-    letterhead is shown in the header and the sidebar rather than in the
-    document, and the sender is pictured by the issue author's GitHub avatar.
+    letterhead is taken out of the document and its sender and recipient shown
+    in the sidebar: the sender pictured by the issue author's GitHub avatar, the
+    recipient by the school's logo.
     """
     letterhead = extract(issue.body)
     document = read(letterhead.body)
@@ -208,15 +212,13 @@ def _page(
         "questionnaire.html",
         {
             "title": issue.title,
-            "objective": inline_html(letterhead.objective),
-            "usage": inline_html(letterhead.usage),
             "sender": sender,
             "sender_avatar": (
                 f"https://github.com/{issue.author}.png" if issue.author else ""
             ),
             "sender_initials": initials(sender),
             "recipient": letterhead.recipient,
-            "recipient_initials": initials(letterhead.recipient),
+            "recipient_image": RECIPIENT_IMAGE,
             "parts": parts(document),
             "outline": outline(document),
             "key": key,

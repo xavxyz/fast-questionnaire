@@ -59,11 +59,6 @@ def to_html(markdown: str) -> str:
     return _MARKDOWN.render(markdown)
 
 
-def inline_html(markdown: str) -> str:
-    """A line of Markdown, links and emphasis included, without a paragraph."""
-    return _MARKDOWN.renderInline(markdown)
-
-
 def parts(document: list[Part]) -> list[dict]:
     """The document as the template walks it: Markdown, then a slot, then…
 
@@ -161,7 +156,7 @@ def _anchor(text: str, taken: set[str]) -> str:
 
 
 def initials(name: str) -> str:
-    """The one or two letters the recipient's circle shows in place of a photo.
+    """The one or two letters the sender's circle shows when there is no avatar.
 
     From the capitalised words when there are some, `MD` for `Marie Dupont`,
     otherwise from the longer words of a role, `RM` for `la responsable de la

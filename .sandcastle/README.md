@@ -68,7 +68,7 @@ all rather than failing later with an opaque SDK error. Then:
 ```bash
 npm --prefix .sandcastle install
 npm --prefix .sandcastle run sandcastle -- --dry-run    # prints the plan, runs nothing
-npm --prefix .sandcastle run sandcastle -- --only 1     # one issue
+npm --prefix .sandcastle run sandcastle -- --only 3     # one issue
 npm --prefix .sandcastle run sandcastle                 # the whole pipeline
 ```
 
@@ -112,21 +112,25 @@ worth salvaging survives (`git log <ref>`, `git checkout -b … <ref>`);
 uncommitted changes in a removed worktree do not. A branch held by a worktree
 Sandcastle did not create is left strictly alone and fails that issue instead.
 
-## It stops on purpose
+## It runs unattended
 
-Issue #1 opens a **draft** pull request and the pipeline halts: later waves
-branch from `main`, so continuing before you have merged it would build on a
-package layout and a body transform that do not exist yet. Review the draft,
-merge it, and run the same command again — closed issues are skipped, so it
-picks up where it left off.
+`REVIEW_BY_HUMAN` is empty, so every ticket merges as soon as the host's gates
+pass and its agent reports every acceptance criterion met, and the next wave
+branches from that merge. Add an issue to `REVIEW_BY_HUMAN` to make the run open
+a draft for it and stop there instead; merge the draft and run the same command
+again — closed issues are skipped, so it picks up where it left off.
 
 ## Things that will bite
 
-**Issue #1 is the whole first version.** The body transform, the app, the page
-and the command-line tool in one sandbox session. On Vercel Hobby that session
-is capped at 45 minutes; if the agent runs out of time, split #1 into slices
-(the transform first, since everything else stands on it) rather than raising
-the timeout past what the plan allows.
+**Tickets lean on their spec.** Tickets sliced by `/to-tickets` name their
+spec under a `## Parent` heading and defer to it for testing decisions and
+scope. The sandbox cannot read GitHub, so the host fetches that parent and
+interpolates it into `prompt.md` as `{{PARENT_SPEC}}`.
+
+**Criteria the sandbox cannot meet stop the chain.** An agent that honestly
+reports a criterion unmet makes its ticket unlandable, and everything
+downstream is skipped. A criterion that needs GitHub, a real credential or a
+browser belongs in a human ticket, not in one listed in `WAVES`.
 
 **The install hooks.** The Vercel provider ignores `.sandcastle/Dockerfile`, so
 `claude` and `uv` are installed by `onSandboxReady` hooks in `main.mts` and

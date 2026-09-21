@@ -10,7 +10,7 @@
  * Run from the repository root, through this directory's package.json:
  *
  *   npm --prefix .sandcastle run sandcastle                  # the whole pipeline
- *   npm --prefix .sandcastle run sandcastle -- --only 1      # one issue
+ *   npm --prefix .sandcastle run sandcastle -- --only 3      # one issue
  *   npm --prefix .sandcastle run sandcastle -- --dry-run     # print the plan, run nothing
  */
 
@@ -39,26 +39,30 @@ const MODEL = process.env.SANDCASTLE_MODEL ?? "claude-opus-5";
  * Issues in dependency order. Each inner array is a wave whose issues have no
  * dependency on each other and whose agents run concurrently.
  *
- * Only issues labelled `ready-for-agent` belong here. #1 builds the whole first
- * version — the body transform, the app, the command-line tool. #2 (deploy from
- * a GitHub Action) is still in triage and needs FastAPI Cloud credentials an
- * agent cannot hold, so it is not listed.
+ * Only issues labelled `ready-for-agent` belong here: #3–#8, the tickets sliced
+ * from spec #1. #1 itself is the spec, not work. #9 (deploy to FastAPI Cloud)
+ * and #2 (deploy from a GitHub Action) need FastAPI Cloud credentials an agent
+ * cannot hold, so they are not listed.
+ *
+ * #8 is blocked only by #6, so it could share a wave with #7, but both change
+ * the respondent's page: branched from the same `main`, the second to land
+ * would conflict with the first. One more wave is cheaper than that.
  *
  * This is an execution order, not a statement of what depends on what — which a
  * failing agent makes the pipeline need to know. See `readBlockers`.
  */
-const WAVES: number[][] = [[1]];
+const WAVES: number[][] = [[3], [4], [5], [6], [7], [8]];
 
 /**
- * Issues whose pull request is opened as a draft and left for a human. #1
- * establishes everything later issues inherit — the package layout, the body
- * transform seam, the settings — so a mistake there is a mistake everywhere.
+ * Issues whose pull request is opened as a draft and left for a human.
  *
- * The pipeline stops after any wave containing one of these: later waves branch
- * from `main`, so continuing before the human has merged would build the next
- * issue on code that does not exist yet.
+ * Empty: the chain runs unattended, each ticket merged once the host's gates
+ * pass and the agent reports every criterion met. Add an issue here to make the
+ * run stop after its wave — later waves branch from `main`, so continuing
+ * before the human has merged would build the next issue on code that does not
+ * exist yet.
  */
-const REVIEW_BY_HUMAN = new Set([1]);
+const REVIEW_BY_HUMAN = new Set<number>();
 
 /**
  * Vercel Hobby caps a sandbox session at 45 minutes. Sandcastle's Vercel
@@ -301,6 +305,18 @@ const issueTitle = (issue: number) =>
 const issueBody = (issue: number) =>
   gh("issue", "view", String(issue), "--repo", REPO, "--json", "body", "-q", ".body");
 
+/**
+ * The spec a ticket was sliced from, as `/to-tickets` records it: `#N` under a
+ * `## Parent` heading. Tickets lean on it for everything they share — testing
+ * decisions, out of scope, the body format — and the sandbox cannot read
+ * GitHub, so the host has to hand it over alongside the ticket.
+ */
+const parentSpec = (body: string): string => {
+  const parent = /^## Parent\s*\n+#(\d+)/m.exec(body)?.[1];
+  if (parent === undefined) return "This issue has no parent spec.";
+  return `Issue #${parent}: ${issueTitle(Number(parent))}\n\n${issueBody(Number(parent))}`;
+};
+
 /** Does this checkout already have a branch by this name? */
 const branchExists = (branch: string) =>
   succeeds("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`]);
@@ -487,6 +503,7 @@ const implementIssue = async (
   // first move on every issue it hands over.
   const branch = agentBranch(issue);
   const title = issueTitle(issue);
+  const body = issueBody(issue);
   log(issue, title);
   log(issue, `branch ${branch}, model ${MODEL}`);
 
@@ -508,7 +525,8 @@ const implementIssue = async (
     promptArgs: {
       ISSUE_NUMBER: issue,
       ISSUE_TITLE: title,
-      ISSUE_BODY: issueBody(issue),
+      ISSUE_BODY: body,
+      PARENT_SPEC: parentSpec(body),
     },
     // Concurrent runs in the same wave must not share a branch. `head` and
     // `merge-to-head` are unsafe for concurrent work; a named branch per issue

@@ -9,6 +9,15 @@ Title: {{ISSUE_TITLE}}
 
 {{ISSUE_BODY}}
 
+## The spec it was sliced from
+
+Your issue is one ticket cut from a larger spec. The spec is here for context:
+its "Testing Decisions", "Out of Scope" and implementation decisions bind you,
+but its user stories are shared between tickets — build only what your issue
+asks for.
+
+{{PARENT_SPEC}}
+
 ## Rules
 
 **Vocabulary.** If `CONTEXT.md` exists at the repository root, read it first and

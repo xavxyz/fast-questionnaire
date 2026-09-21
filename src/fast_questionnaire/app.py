@@ -29,7 +29,7 @@ from .github import (
     write_issue_body,
 )
 from .link import KEY, opens
-from .page import parts
+from .page import draft_key, parts
 from .settings import MissingSetting, github_token, master_secret
 
 # What GitHub lets an owner or a repository be called. A name outside this is
@@ -72,7 +72,9 @@ def questionnaire(
     except GitHubError as failed:
         return _error(request, str(failed), status_code=502)
 
-    return _page(request, issue, key, envoye=bool(envoye))
+    return _page(
+        request, repository, issue_number, issue, key, envoye=bool(envoye)
+    )
 
 
 @app.post("/{owner}/{name}/{number}", include_in_schema=False)
@@ -182,8 +184,19 @@ def _comment(author: str, document: list[Part]) -> str:
     return f"{mention}{sent} Elles sont dans le corps de l'issue, sous chaque question."
 
 
-def _page(request: Request, issue: Issue, key: str, envoye: bool) -> Response:
-    """The Questionnaire as the respondent reads and answers it."""
+def _page(
+    request: Request,
+    repository: Repository,
+    issue_number: int,
+    issue: Issue,
+    key: str,
+    envoye: bool,
+) -> Response:
+    """The Questionnaire as the respondent reads and answers it.
+
+    The page carries the name the respondent's draft is kept under, and whether
+    a send has just succeeded: the draft itself never leaves their browser.
+    """
     return TEMPLATES.TemplateResponse(
         request,
         "questionnaire.html",
@@ -192,6 +205,7 @@ def _page(request: Request, issue: Issue, key: str, envoye: bool) -> Response:
             "parts": parts(read(issue.body)),
             "key": key,
             "envoye": envoye,
+            "draft": draft_key(repository, issue_number),
         },
     )
 

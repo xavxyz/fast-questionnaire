@@ -59,6 +59,17 @@ valid key.
 uv run fastapi dev
 ```
 
+## Keep the draft in the browser
+
+The answers are saved in the respondent's browser as they type, so closing the
+tab or losing the connection loses nothing. The draft is kept in
+`localStorage` under `fast-questionnaire:owner/repo#number`, so two
+Questionnaires never share one, and it is restored over the pre-filled answers
+when the page loads. Nothing of a draft ever reaches the app.
+
+A send that fails leaves the draft where it is, for a retry. A send that
+succeeds clears it, so the page then shows what the issue actually holds.
+
 ## Send the answers
 
 Pressing send posts the same secret link. The send checks the key and the

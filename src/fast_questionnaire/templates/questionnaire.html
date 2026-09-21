@@ -42,4 +42,82 @@
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: true });
     </script>
+    <script>
+      // The respondent's draft. It is written as they type and never leaves
+      // their browser: closing the tab or losing the connection loses nothing,
+      // and a send that fails leaves the draft where it is, for a retry. It is
+      // forgotten only once a send has succeeded, so that the page then shows
+      // what the issue actually holds.
+      (() => {
+        const name = {{ draft | tojson }};
+        const sent = {{ envoye | tojson }};
+        const form = document.querySelector("form");
+        if (!form) {
+          return;
+        }
+        const answers = form.querySelectorAll("textarea");
+
+        let kept;
+        try {
+          kept = window.localStorage;
+          // Reading once tells us now, rather than mid-sentence, whether this
+          // browser lets us keep anything at all.
+          kept.getItem(name);
+        } catch (refused) {
+          return;
+        }
+
+        const forget = () => {
+          try {
+            kept.removeItem(name);
+          } catch (refused) {
+            // Nothing to keep and nothing to say: the page still works.
+          }
+        };
+
+        const save = () => {
+          const draft = {};
+          for (const answer of answers) {
+            draft[answer.name] = answer.value;
+          }
+          try {
+            kept.setItem(name, JSON.stringify(draft));
+          } catch (refused) {
+            // A full or closed store costs the draft, never the answers.
+          }
+        };
+
+        const restore = () => {
+          let draft = null;
+          try {
+            draft = JSON.parse(kept.getItem(name));
+          } catch (unreadable) {
+            return;
+          }
+          if (!draft || typeof draft !== "object") {
+            return;
+          }
+          for (const answer of answers) {
+            if (typeof draft[answer.name] === "string") {
+              answer.value = draft[answer.name];
+            }
+          }
+        };
+
+        if (sent) {
+          // The issue now holds what was sent, so the answers on this page are
+          // the truth and the draft has nothing left to protect. The
+          // confirmation leaves the address bar with it, so that reloading
+          // this page later cannot throw away a draft written since.
+          forget();
+          history.replaceState(null, "", form.action);
+        } else {
+          // Over the answers the issue holds: the draft is the later of the
+          // two, and it is what the respondent was in the middle of writing.
+          restore();
+        }
+
+        form.addEventListener("input", save);
+      })();
+    </script>
 {% endblock %}

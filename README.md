@@ -89,11 +89,16 @@ writes nothing further.
 
 ## Deploy
 
-Every push to `main` runs the tests, then deploys to FastAPI Cloud once they
-all pass. A failing test means no deploy, and pushes to other branches and pull
-requests never deploy. See `.github/workflows/deploy.yml`.
+Every pull request against `main` runs the checks: the tests, `tach check` and
+the cycle check. They show on the pull request as the `CI / checks` status
+check. See `.github/workflows/ci.yml`. Pull requests never deploy and never see
+the deploy secrets.
 
-The workflow reads two repository secrets, `FASTAPI_CLOUD_TOKEN` and
+Every push to `main` runs the same checks, then deploys to FastAPI Cloud once
+they all pass. A failing check means no deploy, and pushes to other branches
+never deploy. See `.github/workflows/deploy.yml`.
+
+The deploy job reads two repository secrets, `FASTAPI_CLOUD_TOKEN` and
 `FASTAPI_CLOUD_APP_ID`, and nothing else. They are created once, by the
 maintainer, while logged in to FastAPI Cloud:
 

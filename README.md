@@ -17,16 +17,32 @@ repository — gitignored, never committed. See `.env.example`.
 
 - `GITHUB_TOKEN` — a fine-grained personal access token with Issues read and
   write on the repositories a Questionnaire lives in.
+- `MASTER_SECRET` — the secret every secret link's key is computed from.
+  Changing it invalidates every link at once.
 
 ## Create a Questionnaire issue
 
 Prepare the body of a `to-questionnaire` file, create the issue in a private
-repository, and print its URL. The issue's title is the document's top-level
-heading. A public repository is refused before anything is created.
+repository, and print its secret link. The issue's title is the document's
+top-level heading. A public repository is refused before anything is created.
 
 ```sh
 uv run new tests/fixtures/template.md EPF-MDE/complex-web-services
 ```
+
+## Resend a secret link
+
+Print the secret link of a Questionnaire issue that already exists — the same
+link `new` printed when it created it.
+
+```sh
+uv run link https://github.com/EPF-MDE/complex-web-services/issues/12
+```
+
+The link's path carries owner, repository and issue number, and its query
+carries a key: an HMAC-SHA256 of `owner/repo#number` under the master secret.
+Nothing is stored per link, and one issue's link cannot be derived from
+another's.
 
 ## Run the app
 

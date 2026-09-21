@@ -13,6 +13,11 @@ from markdown_it.common.utils import escapeHtml
 from markdown_it.renderer import RendererHTML
 
 from .body import Part, Segment, Slot
+from .github import Repository
+
+# Where the respondent's draft lives in their browser. The app stores nothing
+# of a draft itself; it only tells the page which name to keep it under.
+DRAFT = "fast-questionnaire"
 
 # The class Mermaid, loaded from a CDN, draws on its own once the page is
 # loaded. The code stays escaped: the browser reads the diagram's source from
@@ -60,3 +65,12 @@ def parts(document: list[Part]) -> list[dict]:
                 }
             )
     return walked
+
+
+def draft_key(repository: Repository, number: int) -> str:
+    """The name the respondent's draft is kept under in their browser.
+
+    Owner, repository and issue number, as GitHub names the issue, so that two
+    Questionnaires opened in the same browser never share a draft.
+    """
+    return f"{DRAFT}:{repository}#{number:d}"

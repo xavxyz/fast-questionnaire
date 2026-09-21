@@ -3,13 +3,15 @@
 It knows nothing of GitHub, HTTP or the page. Prepare turns a document written
 with the `to-questionnaire` skill into an issue body whose answer stubs have
 become named answer slots; Read gives that body back as the document in order,
-Markdown segments interleaved with answer slots.
+Markdown segments interleaved with answer slots; Answer writes the respondent's
+answers back into those slots and changes nothing else.
 """
 
 from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 SLOT_OPEN = "<!-- q:{name} -->"
@@ -54,6 +56,10 @@ class BodyTransformError(Exception):
 
 class PrepareError(BodyTransformError):
     """A document Prepare refuses to turn into a Questionnaire body."""
+
+
+class AnswerError(BodyTransformError):
+    """Answers Answer refuses to write into a Questionnaire body."""
 
 
 def prepare(document: str) -> str:
@@ -210,3 +216,94 @@ def _answer(quoted: list[str]) -> str:
             written.append(line)
     answer = "\n".join(written).strip("\n")
     return answer if answer.strip() else ""
+
+
+def answer(body: str, answers: Mapping[str, str]) -> str:
+    """Write answers into a Questionnaire issue body, and change nothing else.
+
+    Only the contents of the answer slots named in `answers` change: every
+    other byte of the body — the questions, the context, the markers, and the
+    slots the mapping says nothing about — comes back as it went in, so that
+    whatever the author edited elsewhere since the page was opened is kept.
+
+    Each answer line is written as a blockquote line, an empty answer restores
+    the bare `>` stub, and a name matching no slot is refused rather than
+    written nowhere and forgotten.
+    """
+    written: list[str] = []
+    named: list[str] = []
+    inside = False
+    keeping = False
+    fence: str | None = None
+
+    for line in body.split("\n"):
+        if inside:
+            if _SLOT_CLOSE.match(line.strip()):
+                inside = False
+                written.append(line)
+            elif keeping:
+                # A slot the mapping says nothing about: its answer is not
+                # this send's to change.
+                written.append(line)
+            continue
+
+        opening = None if fence is not None else _SLOT_OPEN.match(line.strip())
+        if opening:
+            name = opening["name"]
+            named.append(name)
+            written.append(line)
+            inside = True
+            keeping = name not in answers
+            if not keeping:
+                written.extend(_quoted(answers[name]))
+            continue
+
+        if fence is not None:
+            if _closes(fence, line):
+                fence = None
+        else:
+            opened = _FENCE.match(line)
+            if opened:
+                fence = opened["fence"]
+        written.append(line)
+
+    unknown = [name for name in answers if name not in named]
+    if unknown:
+        raise AnswerError(
+            "Ces réponses ne correspondent à aucun emplacement du Questionnaire : "
+            f"« {' », « '.join(unknown)} ». L'issue a peut-être changé depuis "
+            "que la page a été ouverte."
+        )
+
+    return "\n".join(written)
+
+
+def _quoted(answer: str) -> list[str]:
+    """One answer as the blockquote lines that go inside its slot.
+
+    An answer with nothing in it gives back the bare `>` stub the slot was
+    prepared with, so that withdrawing an answer leaves the issue reading as
+    the document with that blank unfilled.
+    """
+    lines = _neutralised(answer).split("\n")
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    if not lines:
+        return [">"]
+    return [f"> {line}" if line.strip() else ">" for line in lines]
+
+
+def _neutralised(answer: str) -> str:
+    """An answer that can only ever be read as the answer it is.
+
+    Line endings come from a browser, so they are normalised to the one the
+    body uses. HTML comment openers and closers are turned into the character
+    references GitHub renders as the very same characters, so that an answer
+    reads on the issue exactly as it was written but can neither close a slot
+    marker nor open a comment that swallows the questions below it. The escape
+    is idempotent: an answer sent twice comes back the same.
+    """
+    normalised = answer.replace("\r\n", "\n").replace("\r", "\n")
+    return normalised.replace("<!--", "&lt;!--").replace("-->", "--&gt;")

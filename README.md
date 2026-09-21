@@ -44,7 +44,17 @@ carries a key: an HMAC-SHA256 of `owner/repo#number` under the master secret.
 Nothing is stored per link, and one issue's link cannot be derived from
 another's.
 
-## Run the app
+## Open the secret link
+
+The link shows the whole Questionnaire as a French page: headings, emphasis,
+links, lists and tables are rendered server-side, Mermaid blocks are drawn in
+the browser by Mermaid loaded from a CDN, and a text area sits where each
+answer slot is, pre-filled with the answer the issue holds. Sending the
+answers back is not there yet.
+
+A wrong or missing key shows a plain not-found page, the same one every
+unknown path shows, and an issue in a public repository is refused even with a
+valid key.
 
 ```sh
 uv run fastapi dev

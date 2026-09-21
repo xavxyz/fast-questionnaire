@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Questionnaire momentanément indisponible{% endblock %}
+
+{% block main %}
+  <div class="avis">
+    <h1>Questionnaire momentanément indisponible</h1>
+    <p>{{ erreur }}</p>
+    <p>
+      Réessaie dans quelques minutes ; si le problème dure, préviens la
+      personne qui t'a envoyé ce lien.
+    </p>
+  </div>
+{% endblock %}

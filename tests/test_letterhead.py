@@ -14,6 +14,9 @@ def fixture(name: str) -> str:
 def test_extract_reads_a_french_letterhead():
     letterhead = extract(fixture("questionnaire-fr.md"))
 
+    assert letterhead.title == (
+        "Réservation des salles de la médiathèque : ce que l'équipe doit savoir"
+    )
     assert letterhead.sender == "l'équipe produit"
     assert letterhead.recipient == "la responsable de la médiathèque"
     assert letterhead.objective == (
@@ -44,6 +47,7 @@ def test_extract_reads_an_english_letterhead_and_takes_it_out_of_the_body():
 
     letterhead = extract(document)
 
+    assert letterhead.title == "Launch capacity for the booking service"
     assert letterhead.sender == "the product team"
     assert letterhead.recipient == "the operations lead"
     assert letterhead.objective == (
@@ -61,11 +65,12 @@ def test_extract_leaves_a_document_without_a_letterhead_as_it_is():
 
     assert letterhead.body == document
     assert (
+        letterhead.title,
         letterhead.sender,
         letterhead.recipient,
         letterhead.objective,
         letterhead.usage,
-    ) == ("", "", "", "")
+    ) == ("", "", "", "", "")
 
 
 def test_extract_keeps_a_bold_opening_paragraph_that_is_not_a_letterhead():

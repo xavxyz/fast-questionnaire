@@ -200,8 +200,8 @@ def _page(
 
     The page carries the name the respondent's draft is kept under, and whether
     a send has just succeeded: the draft itself never leaves their browser. The
-    letterhead is taken out of the document and its sender and recipient shown
-    in the sidebar: the sender pictured by the issue author's GitHub avatar, the
+    letterhead is taken out of the document: its title heads the document, and
+    its sender and recipient are shown in the sidebar: the sender pictured by the issue author's GitHub avatar, the
     recipient by the school's logo.
     """
     letterhead = extract(issue.body)
@@ -212,6 +212,7 @@ def _page(
         "questionnaire.html",
         {
             "title": issue.title,
+            "heading": letterhead.title or issue.title,
             "sender": sender,
             "sender_avatar": (
                 f"https://github.com/{issue.author}.png" if issue.author else ""

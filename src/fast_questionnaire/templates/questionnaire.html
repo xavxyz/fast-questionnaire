@@ -158,6 +158,7 @@
       </p>
       {% endif %}
       <article class="carte">
+        <h1>{{ heading }}</h1>
         {% for part in parts %}
           {% if part.kind == "markdown" %}
 {{ part.html | safe }}

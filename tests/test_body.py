@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from fast_questionnaire.body import PrepareError, prepare
+from fast_questionnaire.body import PrepareError, Segment, Slot, prepare, read
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -133,3 +133,149 @@ def test_prepare_refuses_a_stub_with_no_heading_above_it():
         prepare(document)
 
     assert "titre" in str(refusal.value)
+
+
+# --- Read -------------------------------------------------------------------
+
+# A body as GitHub holds it once an answer has been sent: the answer sits in
+# its slot as a blockquote, which is what the issue shows the author.
+ANSWERED_BODY = (
+    "# Réservation des salles\n"
+    "\n"
+    "## Réservations\n"
+    "\n"
+    "### Combien de créneaux d'avance ?\n"
+    "\n"
+    "<!-- q:combien-de-creneaux-d-avance -->\n"
+    "> Deux par jour.\n"
+    ">\n"
+    "> Sept jours glissants.\n"
+    "<!-- /q -->\n"
+    "\n"
+    "## Autre chose ?\n"
+    "\n"
+    "<!-- q:autre-chose -->\n"
+    ">\n"
+    "<!-- /q -->\n"
+)
+
+
+def slots(document: list) -> list[Slot]:
+    """The answer slots of a document Read gave back, in order."""
+    return [part for part in document if isinstance(part, Slot)]
+
+
+def segments(document: list) -> list[Segment]:
+    """The Markdown segments of a document Read gave back, in order."""
+    return [part for part in document if isinstance(part, Segment)]
+
+
+@pytest.mark.parametrize("name", ["template.md", "questionnaire-fr.md"])
+def test_read_gives_back_a_freshly_prepared_body_with_every_slot_empty(name):
+    document = read(prepare(fixture(name)))
+
+    assert slots(document)
+    assert [slot.answer for slot in slots(document)] == [""] * len(slots(document))
+
+
+def test_read_gives_back_the_slots_in_the_order_prepare_named_them():
+    body = prepare(fixture("questionnaire-fr.md"))
+
+    assert [slot.name for slot in slots(read(body))] == slot_names(body)
+
+
+def test_read_carries_each_slot_s_name_and_heading():
+    document = read(prepare(fixture("template.md")))
+
+    assert [(slot.name, slot.heading) for slot in slots(document)] == [
+        (
+            "what-load-is-the-system-expected-to-handle-at-launch",
+            "What load is the system expected to handle at launch?",
+        ),
+        ("anything-else", "Anything else?"),
+    ]
+
+
+def test_read_strips_the_blockquote_prefix_from_an_answered_slot():
+    answered, catch_all = slots(read(ANSWERED_BODY))
+
+    assert answered.answer == "Deux par jour.\n\nSept jours glissants."
+    assert catch_all.answer == ""
+
+
+def test_read_gives_back_markdown_segments_interleaved_with_the_slots():
+    document = read(prepare(fixture("template.md")))
+
+    assert [type(part) for part in document] == [Segment, Slot, Segment, Slot]
+    assert "## Context" in document[0].markdown
+    assert "## Anything else?" in document[2].markdown
+
+
+def test_read_drops_the_invisible_slot_markers_from_the_markdown():
+    document = read(prepare(fixture("questionnaire-fr.md")))
+
+    assert all("<!--" not in segment.markdown for segment in segments(document))
+
+
+def test_read_keeps_a_mermaid_block_inside_its_markdown_segment():
+    document = read(prepare(fixture("questionnaire-fr.md")))
+
+    assert "```mermaid" in document[0].markdown
+    assert "flowchart LR" in document[0].markdown
+
+
+def test_read_gives_back_a_body_without_a_slot_as_one_markdown_segment():
+    body = "# Titre\n\nRien à répondre ici."
+
+    assert read(body) == [Segment(markdown=body)]
+
+
+def test_read_does_not_take_a_slot_s_heading_from_inside_a_code_block():
+    body = prepare(
+        "# Titre\n"
+        "\n"
+        "### La seule question\n"
+        "\n"
+        "```\n"
+        "### pas un titre\n"
+        "```\n"
+        "\n"
+        ">\n"
+    )
+
+    [slot] = slots(read(body))
+
+    assert slot.heading == "La seule question"
+
+
+def test_read_keeps_name_and_answer_when_the_question_s_wording_changed():
+    """The author fixes a typo on GitHub; the respondent's answer stays put."""
+    reworded = ANSWERED_BODY.replace(
+        "### Combien de créneaux d'avance ?",
+        "### Combien de créneaux un étudiant peut-il réserver d'avance ?",
+    )
+
+    answered, _ = slots(read(reworded))
+
+    assert answered.name == "combien-de-creneaux-d-avance"
+    assert (
+        answered.heading
+        == "Combien de créneaux un étudiant peut-il réserver d'avance ?"
+    )
+    assert answered.answer == "Deux par jour.\n\nSept jours glissants."
+
+
+def test_read_keeps_an_answer_that_quotes_something_itself():
+    body = (
+        "### La question\n"
+        "\n"
+        "<!-- q:la-question -->\n"
+        "> Elle m'a dit :\n"
+        ">\n"
+        "> > deux par jour\n"
+        "<!-- /q -->\n"
+    )
+
+    [slot] = slots(read(body))
+
+    assert slot.answer == "Elle m'a dit :\n\n> deux par jour"

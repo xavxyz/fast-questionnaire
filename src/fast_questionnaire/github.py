@@ -1,8 +1,8 @@
 """The GitHub calls the command-line tool and the app make.
 
 It knows nothing of the Questionnaire body format: it takes a title and a body
-already prepared, and it answers one question about a repository — is it
-private? Every failure comes back as a `GitHubError` carrying a message meant
+already prepared, gives a body back as GitHub holds it, and it answers one
+question about a repository — is it private? Every failure comes back as a `GitHubError` carrying a message meant
 for a human, never as a traceback.
 """
 
@@ -50,6 +50,15 @@ class Repository:
         return f"{self.owner}/{self.name}"
 
 
+@dataclass(frozen=True)
+class Issue:
+    """A Questionnaire issue, as GitHub holds it right now."""
+
+    number: int
+    title: str
+    body: str
+
+
 def refuse_public_repository(repository: Repository, token: str) -> None:
     """Refuse a public repository, before anything is created or shown.
 
@@ -85,6 +94,22 @@ def create_issue(
             "va la chercher sur le dépôt, puis demande son lien avec « link »."
         )
     return number
+
+
+def fetch_issue(repository: Repository, number: int, token: str) -> Issue:
+    """Read a Questionnaire issue, body included.
+
+    The body is re-read every time the page is shown or written, so that what
+    the respondent sees is what the issue holds, edits by the author included.
+    """
+    fetched = _request("GET", f"/repos/{repository}/issues/{number:d}", token)
+    body = fetched.get("body")
+    title = fetched.get("title")
+    if not isinstance(title, str):
+        raise GitHubError(
+            f"GitHub a répondu pour {repository}#{number} sans donner d'issue."
+        )
+    return Issue(number=number, title=title, body=body if isinstance(body, str) else "")
 
 
 def _request(

@@ -182,9 +182,7 @@
         <div class="reponse">
           <div class="reponse-tete">
             <span class="pastille">Q{{ part.number }}</span>
-            <label for="reponse-{{ part.name }}">
-              {%- if recipient_first_name %}Réponse de {{ recipient_first_name }}{% else %}Votre réponse{% endif -%}
-            </label>
+            <label for="reponse-{{ part.name }}">Réponse</label>
           </div>
           <textarea
             id="reponse-{{ part.name }}"

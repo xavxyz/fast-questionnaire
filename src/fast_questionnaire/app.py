@@ -30,7 +30,7 @@ from .github import (
 )
 from .letterhead import extract
 from .link import KEY, opens
-from .page import draft_key, first_name, initials, inline_html, outline, parts
+from .page import draft_key, initials, inline_html, outline, parts
 from .settings import MissingSetting, github_token, master_secret
 
 # What GitHub lets an owner or a repository be called. A name outside this is
@@ -217,7 +217,6 @@ def _page(
             "sender_initials": initials(sender),
             "recipient": letterhead.recipient,
             "recipient_initials": initials(letterhead.recipient),
-            "recipient_first_name": first_name(letterhead.recipient),
             "parts": parts(document),
             "outline": outline(document),
             "key": key,

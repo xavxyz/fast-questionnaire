@@ -160,19 +160,6 @@ def _anchor(text: str, taken: set[str]) -> str:
     return unique
 
 
-def first_name(recipient: str) -> str:
-    """What the page calls the recipient under each question.
-
-    A person's first name when the letterhead names a person, `Marie` for
-    `Marie Dupont`; a role is kept whole, `la responsable de la médiathèque`,
-    since its first word is no name.
-    """
-    words = recipient.split()
-    if not words:
-        return ""
-    return words[0] if words[0][0].isupper() else recipient
-
-
 def initials(name: str) -> str:
     """The one or two letters the recipient's circle shows in place of a photo.
 

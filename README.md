@@ -86,3 +86,30 @@ the first time, « Réponses mises à jour » every time after — and the page
 reloads with a confirmation. The respondent can send as often as they like. A
 GitHub failure, an expired token included, shows a French error page and
 writes nothing further.
+
+## Deploy
+
+Every push to `main` runs the tests, then deploys to FastAPI Cloud once they
+all pass. A failing test means no deploy, and pushes to other branches and pull
+requests never deploy. See `.github/workflows/deploy.yml`.
+
+The workflow reads two repository secrets, `FASTAPI_CLOUD_TOKEN` and
+`FASTAPI_CLOUD_APP_ID`, and nothing else. They are created once, by the
+maintainer, while logged in to FastAPI Cloud:
+
+```sh
+uv run fastapi cloud setup-ci --secrets-only
+```
+
+The deploy token expires after a year; re-run the same command to regenerate it.
+
+The app's own settings, `GITHUB_TOKEN` and `MASTER_SECRET`, are set as
+environment variables in FastAPI Cloud, never in GitHub: the repository is
+public, and so are its workflow logs.
+
+`fastapi deploy` from a laptop linked to the app still works as a manual
+fallback:
+
+```sh
+uv run fastapi deploy
+```

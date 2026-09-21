@@ -1,0 +1,30 @@
+[project]
+name = "fast-questionnaire"
+version = "0.1.0"
+description = "Answer a to-questionnaire issue through a secret link"
+readme = "README.md"
+authors = [
+    { name = "Xavier", email = "xavier.cazalot@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+]
+
+[project.scripts]
+new = "fast_questionnaire.cli:new"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.fastapi]
+entrypoint = "main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

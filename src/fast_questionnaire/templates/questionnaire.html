@@ -2,45 +2,264 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block style %}
+      main { max-width: 78rem; padding-top: 2rem; }
+      .mise-en-page {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        grid-template-areas: "lateral colonne";
+        gap: 2.5rem;
+        align-items: start;
+      }
+      .colonne { grid-area: colonne; }
+      .lateral { grid-area: lateral; position: sticky; top: 1.5rem; }
+      /* Under 900px the sidebar drops below the document. */
+      @media (max-width: 900px) {
+        .mise-en-page { grid-template-columns: minmax(0, 1fr); grid-template-areas: "colonne" "lateral"; }
+        .lateral { position: static; }
+      }
+      @media (max-width: 600px) {
+        .carte { --marge: 1.25rem; }
+      }
+
+
+      .carte {
+        --marge: 2.25rem;
+        padding: 0 var(--marge) 1.5rem;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--trait);
+        border-radius: 0.9rem;
+      }
+      .carte > :first-child:not(h2) { margin-top: var(--marge); }
+      /* Each section opens on a full-width band. */
+      .carte h2 {
+        margin: 2.5rem calc(-1 * var(--marge)) 1.5rem;
+        padding: 0.85rem var(--marge);
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--violet);
+      }
+      .carte > h2:first-child { margin-top: 0; }
+      .carte table { display: block; overflow-x: auto; }
+      h2, h3 { scroll-margin-top: 1.5rem; }
+
+      .reponse { margin: 1.25rem 0 2rem; }
+      .reponse-tete { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+      .pastille {
+        padding: 0.1rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--violet);
+        background: var(--violet-doux);
+        border-radius: 999px;
+      }
+      .reponse label { font-size: 0.9rem; font-weight: 600; color: var(--texte-second); }
+      .reponse textarea {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 7.5rem;
+        padding: 0.75rem 0.9rem;
+        font: inherit;
+        font-size: 0.95rem;
+        color: var(--texte);
+        background: var(--surface-douce);
+        border: 1px solid var(--trait);
+        border-radius: 0.6rem;
+        resize: vertical;
+      }
+      .reponse textarea:focus {
+        outline: none;
+        background: #fff;
+        border-color: var(--violet);
+        box-shadow: 0 0 0 3px var(--violet-doux);
+      }
+
+      .confirmation {
+        margin: 0 0 1.5rem;
+        padding: 0.9rem 1.1rem;
+        color: var(--texte);
+        background: #fff;
+        border: 1px solid var(--trait);
+        border-left: 4px solid var(--vert);
+        border-radius: 0.6rem;
+      }
+      .note { margin: 1.5rem 0 0; font-size: 0.85rem; color: var(--texte-discret); }
+
+      .bloc {
+        margin-bottom: 1rem;
+        padding: 1.25rem;
+        background: #fff;
+        border: 1px solid var(--trait);
+        border-radius: 0.9rem;
+      }
+      .personne { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+      .rond {
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        overflow: hidden;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--degrade);
+        border-radius: 50%;
+      }
+      .rond img { width: 100%; height: 100%; object-fit: cover; }
+      .rond.logo { box-sizing: border-box; padding: 0.3rem; background: #fff; border: 1px solid var(--trait); }
+      .rond.logo img { object-fit: contain; }
+      .fleche { display: flex; width: 2.5rem; justify-content: center; margin: 0.35rem 0; color: var(--texte-discret); }
+
+      .compte { margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--texte-second); }
+      .compte strong { font-size: 1.35rem; color: var(--violet); }
+      .barre { height: 0.5rem; overflow: hidden; background: var(--surface-douce); border-radius: 999px; }
+      .barre span { display: block; height: 100%; background: var(--degrade); border-radius: 999px; transition: width 0.2s; }
+      .progression button { width: 100%; margin-top: 1rem; }
+
+      .sommaire ol { margin: 0; padding: 0; list-style: none; }
+      .sommaire li { margin: 0.15rem 0; }
+      .sommaire a {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: var(--texte-second);
+        text-decoration: none;
+        border-radius: 0.35rem;
+      }
+      .sommaire a:hover { color: var(--violet); background: var(--violet-doux); }
+      .sommaire .niveau-2 > a { margin-top: 0.4rem; font-weight: 700; color: var(--violet); }
+      .sommaire .niveau-3 > a { padding-left: 1rem; }
+      .point {
+        flex: none;
+        width: 0.5rem;
+        height: 0.5rem;
+        background: var(--trait);
+        border-radius: 50%;
+      }
+      .point.repondu { background: var(--vert); }
+{% endblock %}
+
 {% block main %}
-  {% if envoye %}
-  <p class="confirmation" role="status">
-    Merci, tes réponses ont bien été enregistrées. Tu peux les corriger et les
-    renvoyer autant de fois que tu veux.
-  </p>
-  {% endif %}
-  <form method="post" action="?key={{ key }}">
-    {% for part in parts %}
-      {% if part.kind == "markdown" %}
+  {% set slots = parts | selectattr("kind", "equalto", "slot") | list %}
+  {% set answered = slots | selectattr("answer") | list %}
+  <form class="mise-en-page" method="post" action="?key={{ key }}">
+    <div class="colonne">
+      {% if envoye %}
+      <p class="confirmation" role="status">
+        Merci, tes réponses ont bien été enregistrées. Tu peux les corriger et les
+        renvoyer autant de fois que tu veux.
+      </p>
+      {% endif %}
+      <article class="carte">
+        {% for part in parts %}
+          {% if part.kind == "markdown" %}
 {{ part.html | safe }}
-      {% else %}
-      <div class="reponse">
-        <label for="reponse-{{ part.name }}">Votre réponse</label>
-        <textarea
-          id="reponse-{{ part.name }}"
-          name="{{ part.name }}"
-          rows="6"
-          spellcheck="true"
-          placeholder="Écris ta réponse ici. « Je ne sais pas » est une bonne réponse."
-        >
+          {% else %}
+        <div class="reponse">
+          <div class="reponse-tete">
+            <span class="pastille">Q{{ part.number }}</span>
+            <label for="reponse-{{ part.name }}">Réponse</label>
+          </div>
+          <textarea
+            id="reponse-{{ part.name }}"
+            name="{{ part.name }}"
+            rows="6"
+            spellcheck="true"
+            placeholder="Écris ta réponse ici. « Je ne sais pas » est une bonne réponse."
+          >
 {{ part.answer }}</textarea>
+        </div>
+          {% endif %}
+        {% endfor %}
+      </article>
+      <p class="note">
+        Tu peux laisser des questions vides et envoyer quand même, puis revenir
+        compléter ou corriger tes réponses plus tard avec ce même lien.
+      </p>
+    </div>
+
+    <aside class="lateral">
+      {% if sender or recipient %}
+      <div class="bloc personnes">
+        {% if sender %}
+        <div class="personne">
+          <span class="rond">
+            {%- if sender_avatar %}<img src="{{ sender_avatar }}" alt="" />{% else %}{{ sender_initials }}{% endif -%}
+          </span>
+          <span>{{ sender }}</span>
+        </div>
+        {% endif %}
+        {% if sender and recipient %}
+        <div class="fleche" aria-hidden="true">
+          <svg width="16" height="28" viewBox="0 0 16 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2v23M2 19l6 6 6-6" />
+          </svg>
+        </div>
+        {% endif %}
+        {% if recipient %}
+        <div class="personne">
+          <span class="rond logo"><img src="{{ recipient_image }}" alt="" /></span>
+          <span>{{ recipient }}</span>
+        </div>
+        {% endif %}
       </div>
       {% endif %}
-    {% endfor %}
-    <p class="envoi">
-      <button type="submit">Envoyer mes réponses</button>
-    </p>
-    <p class="note">
-      Tu peux laisser des questions vides et envoyer quand même, puis revenir
-      compléter ou corriger tes réponses plus tard avec ce même lien.
-    </p>
+
+      <div class="bloc progression">
+        <p class="compte">
+          <strong data-repondues>{{ answered | length }}</strong> / {{ slots | length }} réponses
+        </p>
+        <div class="barre">
+          <span
+            data-barre
+            style="width: {{ ((answered | length) * 100 / (slots | length)) | round(1) if slots else 0 }}%"
+          ></span>
+        </div>
+        <button type="submit">Envoyer</button>
+      </div>
+
+      {% if outline %}
+      <nav class="bloc sommaire" aria-label="Sommaire">
+        <ol>
+          {% for heading in outline %}
+          <li class="niveau-{{ heading.level }}">
+            <a href="#{{ heading.anchor }}">
+              {%- if heading.slot %}<span class="point{% if heading.slot in answered | map(attribute='name') %} repondu{% endif %}" data-slot="{{ heading.slot }}"></span>{% endif -%}
+              <span>{{ heading.text }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ol>
+      </nav>
+      {% endif %}
+    </aside>
   </form>
 {% endblock %}
 
 {% block scripts %}
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({ startOnLoad: true });
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          fontFamily: "Montserrat, system-ui, sans-serif",
+          primaryColor: "#f7f1fa",
+          primaryBorderColor: "#470a68",
+          primaryTextColor: "#1a1a1a",
+          secondaryColor: "#f5f7fa",
+          tertiaryColor: "#ffffff",
+          lineColor: "#5c1a7a",
+          edgeLabelBackground: "#ffffff",
+        },
+      });
     </script>
     <script>
       // The respondent's draft. It is written as they type and never leaves
@@ -118,6 +337,41 @@
         }
 
         form.addEventListener("input", save);
+      })();
+    </script>
+    <script>
+      // The progress in the sidebar: how many answers hold text, and which
+      // questions of the outline they answer. It runs after the draft is
+      // restored, so that it counts what the respondent sees.
+      (() => {
+        const form = document.querySelector("form");
+        if (!form) {
+          return;
+        }
+        const answers = form.querySelectorAll("textarea");
+        const count = document.querySelector("[data-repondues]");
+        const bar = document.querySelector("[data-barre]");
+        const dots = document.querySelectorAll("[data-slot]");
+
+        const show = () => {
+          let answered = 0;
+          for (const answer of answers) {
+            const written = answer.value.trim() !== "";
+            if (written) {
+              answered += 1;
+            }
+            for (const dot of dots) {
+              if (dot.dataset.slot === answer.name) {
+                dot.classList.toggle("repondu", written);
+              }
+            }
+          }
+          count.textContent = answered;
+          bar.style.width = answers.length ? `${(answered * 100) / answers.length}%` : "0%";
+        };
+
+        show();
+        form.addEventListener("input", show);
       })();
     </script>
 {% endblock %}

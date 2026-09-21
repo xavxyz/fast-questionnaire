@@ -28,8 +28,9 @@ from .github import (
     refuse_public_repository,
     write_issue_body,
 )
+from .letterhead import extract
 from .link import KEY, opens
-from .page import draft_key, parts
+from .page import draft_key, initials, outline, parts
 from .settings import MissingSetting, github_token, master_secret
 
 # What GitHub lets an owner or a repository be called. A name outside this is
@@ -40,6 +41,9 @@ _NAMEABLE = re.compile(r"^[A-Za-z0-9._-]+$")
 # What the page reads to know a send has just succeeded, and so to show the
 # confirmation the respondent is owed.
 ENVOYE = "envoye"
+
+# The picture the recipient is shown with: the school's logo, whoever they are.
+RECIPIENT_IMAGE = "https://oceens.mtp.epf.fr/static/img/epf_logo.png"
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
@@ -195,14 +199,28 @@ def _page(
     """The Questionnaire as the respondent reads and answers it.
 
     The page carries the name the respondent's draft is kept under, and whether
-    a send has just succeeded: the draft itself never leaves their browser.
+    a send has just succeeded: the draft itself never leaves their browser. The
+    letterhead is taken out of the document and its sender and recipient shown
+    in the sidebar: the sender pictured by the issue author's GitHub avatar, the
+    recipient by the school's logo.
     """
+    letterhead = extract(issue.body)
+    document = read(letterhead.body)
+    sender = letterhead.sender or issue.author
     return TEMPLATES.TemplateResponse(
         request,
         "questionnaire.html",
         {
             "title": issue.title,
-            "parts": parts(read(issue.body)),
+            "sender": sender,
+            "sender_avatar": (
+                f"https://github.com/{issue.author}.png" if issue.author else ""
+            ),
+            "sender_initials": initials(sender),
+            "recipient": letterhead.recipient,
+            "recipient_image": RECIPIENT_IMAGE,
+            "parts": parts(document),
+            "outline": outline(document),
             "key": key,
             "envoye": envoye,
             "draft": draft_key(repository, issue_number),

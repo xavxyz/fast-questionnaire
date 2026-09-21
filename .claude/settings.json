@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "setup-py-deep-modules@setup-py-deep-modules": true
+  }
+}

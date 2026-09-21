@@ -67,21 +67,24 @@ def refuse_public_repository(repository: Repository, token: str) -> None:
 
 def create_issue(
     repository: Repository, title: str, body: str, token: str
-) -> str:
-    """Create the Questionnaire issue and give back its URL."""
+) -> int:
+    """Create the Questionnaire issue and give back its number.
+
+    The number, with the repository, is all a secret link is made of.
+    """
     created = _request(
         "POST",
         f"/repos/{repository}/issues",
         token,
         payload={"title": title, "body": body},
     )
-    url = created.get("html_url")
-    if not url:
+    number = created.get("number")
+    if not isinstance(number, int):
         raise GitHubError(
-            f"GitHub a créé l'issue dans {repository} sans en donner l'adresse : "
-            "va la chercher sur le dépôt."
+            f"GitHub a créé l'issue dans {repository} sans en donner le numéro : "
+            "va la chercher sur le dépôt, puis demande son lien avec « link »."
         )
-    return url
+    return number
 
 
 def _request(

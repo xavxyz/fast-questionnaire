@@ -2,8 +2,8 @@
 
 A `to-questionnaire` document opens with its title, then a paragraph giving its
 objective and one naming its sender, its recipient and what the answers will be
-used for — in French or in English. The page shows these above the document and
-in its sidebar, so they are taken out of the Markdown before it is rendered; the rest
+used for, and whoever else is copied in — in French or in English. The page
+shows these above the document and in its sidebar, so they are taken out of the Markdown before it is rendered; the rest
 of the document, answer slots included, comes back untouched.
 """
 
@@ -25,6 +25,8 @@ _FIELDS = {
     "from": "sender",
     "à": "recipient",
     "to": "recipient",
+    "copie": "copy",
+    "cc": "copy",
     "usage des réponses": "usage",
     "how your answers will be used": "usage",
 }
@@ -40,6 +42,7 @@ class Letterhead:
     title: str
     sender: str
     recipient: str
+    copy: str
     objective: str
     usage: str
     body: str
@@ -75,6 +78,7 @@ def extract(document: str) -> Letterhead:
         title=title,
         sender=fields.get("sender", ""),
         recipient=fields.get("recipient", ""),
+        copy=fields.get("copy", ""),
         objective=fields.get("objective", ""),
         usage=fields.get("usage", ""),
         body="\n".join(lines[at:]),

@@ -80,3 +80,21 @@ def test_extract_keeps_a_bold_opening_paragraph_that_is_not_a_letterhead():
 
     assert letterhead.body == "**En bref :** rien à signaler.\n\n## Contexte\n"
     assert letterhead.objective == ""
+
+
+def test_extract_reads_a_letterhead_that_copies_someone_in():
+    document = (
+        "# Titre\n\n"
+        "**Objectif :** comprendre.\n\n"
+        "**De :** Xavier Cazalot, **À :** Fanny Sterna, "
+        "**Copie :** Antoine Gademer, **Usage des réponses :** recopiées.\n\n"
+        "## Contexte\n"
+    )
+
+    letterhead = extract(document)
+
+    assert letterhead.sender == "Xavier Cazalot"
+    assert letterhead.recipient == "Fanny Sterna"
+    assert letterhead.copy == "Antoine Gademer"
+    assert letterhead.usage == "recopiées."
+    assert letterhead.body == "## Contexte\n"
